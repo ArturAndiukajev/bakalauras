@@ -1,0 +1,843 @@
+================================================================================
+PROJEKTO FAILŲ GIDAS
+Bakalauro darbo versija
+================================================================================
+
+Šis failų gidas aprašo bakalauro darbo repozitorijos versiją.
+Jis skirtas paaiškinti, kokie failai palikti projekte, kokią funkciją jie atlieka
+ir kaip jie susiję su galutiniais eksperimento rezultatais.
+
+Darbo tema:
+„Lietuvos BVP išankstinis prognozavimas: tradicinių ir alternatyvių duomenų
+šaltinių panaudojimas“.
+
+Ši repozitorijos versija nėra pilna ankstesnio plataus nowcasting projekto kopija.
+Joje palikti pagrindiniai failai, kurie buvo tiesiogiai arba netiesiogiai naudoti
+bakalauro darbo eksperimentuose:
+
+- duomenų eksportavimui ir paruošimui;
+- pseudo-realaus laiko prognozių sudarymui;
+- apkarpytų kraštų problemai spręsti;
+- ElasticNet, MIDAS, MIDASML, DFM ir DFM-MF modeliams;
+- TACTiS-2 užpildymo metodui;
+- RMSE, MAE, RMSE pokyčio ir Diebold--Mariano testo rezultatams gauti.
+
+Ankstesnėje projekto versijoje buvo ir kitų komponentų, tokių kaip BVAR, VAE,
+bridge equations, Optuna paieška, Streamlit dashboard, FRED/ALFRED/Yahoo Finance
+duomenų loaderiai ir platesnė ETL infrastruktūra. Jie nėra pagrindinė galutinės
+bakalauro darbo analizės dalis, todėl šiame gide aprašomi tik aktualūs arba
+repozitorijoje palikti pagalbiniai failai.
+
+================================================================================
+KAIP NAUDOTIS ŠIUO PROJEKTU
+================================================================================
+
+Tipinė darbo atkūrimo seka yra tokia:
+
+1. Eksportuoti pasirinktus Eurostat duomenis:
+   python scripts/export_selected_eurostat_nowcast_data.py
+
+2. Eksportuoti Google Trends duomenis:
+   python scripts/export_selected_google_trends_data.py --dataset-key google_trends --suffix v1
+   python scripts/export_selected_google_trends_data.py --dataset-key google_trends_lt --suffix lt
+
+3. Paruošti frequency-aware duomenis:
+   python scripts/prepare_selected_frequency_aware_data.py
+
+4. Paleisti pagrindinius pseudo-realaus laiko eksperimentus:
+   python scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py --only elasticnet
+   python scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py --only midas
+   python scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py --only dfm
+
+5. Skaičiuoti Diebold--Mariano testus:
+   python scripts/run_dm_tests.py
+
+6. Skaičiuoti Google Trends poveikį pagal RMSE pokytį:
+   python calculate_gt_rmse_reduction.py
+
+Svarbu: kai kurie rezultatų lentelių failai buvo papildomai perskaičiuoti atskirais
+pagalbiniais skriptais. Jie gali būti laikomi analizės skriptais, o ne pagrindinio
+pipeline dalimi.
+
+================================================================================
+PAGRINDINIAI DUOMENŲ RINKINIAI
+================================================================================
+
+Galutiniuose eksperimento paleidimuose naudoti penki duomenų rinkiniai:
+
+1. final_thesis_baseline_common
+   Darbe vadinamas 1 rinkiniu.
+   Turinys: makroekonominiai Eurostat rodikliai be Google Trends.
+
+2. final_thesis_gt_only_v1
+   Darbe vadinamas 2 rinkiniu.
+   Turinys: tik angliški Google Trends raktažodžiai.
+
+3. final_thesis_gt_only_lt
+   Darbe vadinamas 3 rinkiniu.
+   Turinys: tik lietuviški Google Trends raktažodžiai.
+
+4. final_thesis_common_plus_gt_v1
+   Darbe vadinamas 4 rinkiniu.
+   Turinys: makroekonominiai Eurostat rodikliai ir angliški Google Trends.
+
+5. final_thesis_common_plus_gt_lt
+   Darbe vadinamas 5 rinkiniu.
+   Turinys: makroekonominiai Eurostat rodikliai ir lietuviški Google Trends.
+
+Prognozės momentai:
+
+-2, -1, 0, +1, +2
+
+Jie reiškia mėnesius, skaičiuojamus santykinai nuo prognozuojamo ketvirčio pabaigos.
+
+Pagrindiniai eksperimento nustatymai:
+
+start-date = 2019-03-31
+end-date = 2026-06-30
+train-start = 2000-01-01
+rolling-window-quarters = 76
+monthly-feature-release-lag-months = 0
+quarterly-feature-release-lag-months = 0
+gt-release-lag-months = 0
+seed = 2234
+
+Pastaba: požymių publikavimo vėlavimai galutiniuose eksperimentuose buvo nustatyti
+lygūs nuliui. Vidinis 30 dienų BVP tikslinio kintamojo vėlavimas local_data_builder.py
+faile nėra tas pats kaip požymių publikavimo vėlavimas. Pagrindiniame prognozavimo
+cikle prognozuojamo ketvirčio BVP reikšmė nėra naudojama mokymo imtyje.
+
+================================================================================
+REPOZITORIJOS STRUKTŪRA
+================================================================================
+
+.
+├── config/
+├── experiments/
+├── nowcasting/
+│   ├── evaluation/
+│   ├── features/
+│   ├── fillers/
+│   ├── models/
+│   └── utils/
+├── scripts/
+├── README.md
+├── aprašymas.txt
+├── calculate_gt_rmse_reduction.py
+├── docker-compose.yml
+├── main.py
+├── requirements.txt
+├── run_ingest.py
+└── run_updates.py
+
+================================================================================
+PART 1: SCRIPTS KATALOGAS
+================================================================================
+
+File: scripts/export_selected_eurostat_nowcast_data.py
+------------------------------------
+Paskirtis:
+Eksportuoja pasirinktus Eurostat rodiklius iš PostgreSQL duomenų bazės.
+
+Vaidmuo pipeline:
+Tai pradinis makroekonominių rodiklių paruošimo žingsnis. Failas sujungia seną
+atrinktų rodiklių metaduomenų sąrašą su dabartine duomenų bazės struktūra ir
+ištraukia reikalingus stebėjimus.
+
+Pagrindiniai rezultatai:
+- selected_eurostat_metadata_mapped_full.csv
+- selected_eurostat_metadata_for_prep.csv
+- selected_eurostat_observations.csv
+- selected_eurostat_wide_panel.csv
+- selected_eurostat_wide_panel.parquet
+- selected_eurostat_wide_panel_with_gdp_target.parquet
+
+Svarbios pastabos:
+Šis failas priklauso nuo PostgreSQL duomenų bazės ir DB_URL aplinkos kintamojo.
+Jis nėra modelio treniravimo failas, bet paruošia žalius pasirinktų Eurostat
+duomenų failus tolimesniam frequency-aware paruošimui.
+
+
+File: scripts/export_selected_google_trends_data.py
+------------------------------------
+Paskirtis:
+Eksportuoja Google Trends duomenis iš PostgreSQL duomenų bazės į plačios formos
+panelę.
+
+Vaidmuo pipeline:
+Naudojamas dviem Google Trends rinkiniams suformuoti:
+- angliškam rinkiniui;
+- lietuviškam rinkiniui.
+
+Svarbūs argumentai:
+--dataset-key
+    Nurodo, kurį Google Trends datasetą eksportuoti.
+
+--suffix
+    Prideda priesagą prie išvesties failų, pvz. v1 arba lt.
+
+Paleidimo pavyzdžiai:
+python scripts/export_selected_google_trends_data.py --dataset-key google_trends --suffix v1
+python scripts/export_selected_google_trends_data.py --dataset-key google_trends_lt --suffix lt
+
+Pagrindiniai rezultatai:
+- selected_google_trends_metadata_v1.csv
+- selected_google_trends_observations_monthend_v1.csv
+- selected_google_trends_wide_panel_v1.parquet
+- selected_google_trends_metadata_lt.csv
+- selected_google_trends_observations_monthend_lt.csv
+- selected_google_trends_wide_panel_lt.parquet
+
+
+File: scripts/prepare_selected_frequency_aware_data.py
+------------------------------------
+Paskirtis:
+Paruošia pasirinktus Eurostat ir Google Trends duomenis galutiniams modeliams.
+
+Vaidmuo pipeline:
+Tai vienas svarbiausių duomenų paruošimo failų. Jis sukuria frequency-aware
+duomenų struktūrą, kurioje mėnesiniai ir ketvirtiniai rodikliai išsaugomi atskirai,
+o Google Trends duomenys paruošiami kaip mėnesiniai požymiai.
+
+Šiame etape:
+- atskiriami mėnesiniai ir ketvirtiniai Eurostat rodikliai;
+- iš Eurostat duomenų sudaromas ketvirtinis BVP tikslinis kintamasis;
+- tikslinis BVP kintamasis pašalinamas iš požymių;
+- taikomos transformacijos ir stacionarumo tikrinimas;
+- Google Trends duomenims netaikomas logaritminis diferencijavimas, nes juose gali būti nulių;
+- išsaugomas frequency map failas.
+
+Pagrindiniai rezultatai:
+data/processed/gdp_target_quarterly.parquet
+data/processed/selected_eurostat_monthly_prepared.parquet
+data/processed/selected_eurostat_quarterly_prepared.parquet
+data/processed/selected_google_trends_monthly_prepared_v1.parquet
+data/processed/selected_google_trends_monthly_prepared_lt.parquet
+data/processed/selected_column_frequency_map_v1.json
+data/processed/selected_column_frequency_map_lt.json
+
+Svarbios pastabos:
+Šis failas yra svarbesnis galutinei bakalauro darbo analizei nei senesnis
+scripts/data_preparation.py, nes būtent jis ruošia atrinktus final thesis duomenis.
+
+
+File: scripts/local_data_builder.py
+------------------------------------
+Paskirtis:
+Lokaliai įkelia paruoštus duomenų rinkinius ir grąžina modeliams reikalingus
+X ir y objektus.
+
+Vaidmuo pipeline:
+Naudojamas run_local_vintage_nowcasts.py faile. Kai duomenų rinkinio pavadinimas
+prasideda final_thesis_, jis įkelia frequency-aware duomenis iš data/processed/.
+
+Svarbūs aspektai:
+- įkelia gdp_target_quarterly.parquet;
+- įkelia selected_eurostat_monthly_prepared.parquet;
+- įkelia selected_eurostat_quarterly_prepared.parquet;
+- pagal dataset pavadinimą prideda angliškus arba lietuviškus Google Trends duomenis;
+- saugo stulpelių dažnių žemėlapį.
+
+Pastaba apie release lag:
+Faile yra gdp_release_lag = 30, tačiau tai yra tik vidinis BVP tikslinio kintamojo
+matomumo nustatymas. Galutiniuose eksperimento paleidimuose požymių publikavimo
+vėlavimai buvo nustatyti lygūs 0 per wrapper failą.
+
+
+File: scripts/run_local_vintage_nowcasts.py
+------------------------------------
+Paskirtis:
+Pagrindinis pseudo-realaus laiko prognozavimo paleidimo failas.
+
+Vaidmuo pipeline:
+Šis failas sujungia duomenų įkėlimą, vintage konstravimą, apkarpytų kraštų
+tvarkymą, požymių atranką, modelio treniravimą, prognozavimą ir rezultatų
+išsaugojimą.
+
+Palaikomi modeliai:
+- ElasticNet
+- MIDAS
+- MIDASML
+- DFM
+- DFM_MF
+
+Palaikomi ElasticNet apkarpytų kraštų užpildymo metodai:
+- locf
+- vertical_realignment
+- autoarima
+- tactis2
+
+Palaikomi požymių atrankos metodai:
+- none
+- pca
+- corr_top_n
+- lasso
+- elasticnet
+
+Svarbios savybės:
+- feature selection fit atliekamas tik ant mokymo imties;
+- prognozuojamo ketvirčio BVP reikšmė nėra naudojama mokyme;
+- palaikomi checkpoint failai;
+- generuojami forecast CSV, metrics CSV ir grafikai;
+- rezultatai naudojami vėlesnėms lentelėms ir DM testams.
+
+
+File: scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py
+------------------------------------
+Paskirtis:
+Pagrindinis galutinių bakalauro darbo eksperimentų wrapper failas.
+
+Vaidmuo pipeline:
+Automatiškai paleidžia didelę eksperimento gardelę skirtingiems modeliams,
+duomenų rinkiniams ir parametrams.
+
+Šiame faile apibrėžta:
+- penki final thesis duomenų rinkiniai;
+- prognozės momentai -2, -1, 0, +1, +2;
+- 0 mėnesių požymių publikavimo vėlavimai;
+- ElasticNet užpildymo metodai: LOCF, vertical realignment, AutoARIMA, TACTiS-2;
+- ElasticNet atrankos metodai: PCA, koreliacijos atranka, LASSO;
+- MIDAS ir MIDASML parametrų gardelė;
+- DFM ir DFM-MF parametrų gardelė;
+- checkpoint ir resume logika;
+- rezultatų kopijavimas į eksperimento katalogą.
+
+Paleidimo pavyzdžiai:
+python scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py --only elasticnet
+python scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py --only midas
+python scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py --only dfm
+
+Svarbios pastabos:
+Tai yra pagrindinis failas, kurį reikėtų laikyti galutinių eksperimento nustatymų
+šaltiniu.
+
+
+File: scripts/run_tactis2_filler.py
+------------------------------------
+Paskirtis:
+Atskiras TACTiS-2 užpildymo metodo paleidimo failas.
+
+Vaidmuo pipeline:
+Naudojamas TACTiS-2 užpildymo veikimui testuoti arba atskirai sugeneruoti
+užpildytas paneles. Galutinėje analizėje TACTiS-2 naudojamas kaip apkarpytų
+kraštų užpildymo metodas prieš ElasticNet, o ne kaip tiesioginis BVP prognozavimo
+modelis.
+
+Svarbios pastabos:
+Šiame faile yra atskiri TACTiS-2 parametrai, pvz. context_length, max_epochs,
+num_samples ir device. Wrapper eksperimente TACTiS-2 gali būti kviečiamas ir per
+run_local_vintage_nowcasts.py.
+
+
+File: scripts/run_dm_tests.py
+------------------------------------
+Paskirtis:
+Skaičiuoja Diebold--Mariano testus tarp forecast CSV failų.
+
+Vaidmuo pipeline:
+Naudojamas įvertinti, ar prognozės su Google Trends statistiškai reikšmingai
+skiriasi nuo prognozių be Google Trends.
+
+Interpretacija:
+- neigiamas vidutinis nuostolio skirtumas reiškia, kad mažesnę paklaidą turėjo
+  modelis su GT;
+- teigiamas vidutinis nuostolio skirtumas reiškia, kad mažesnę paklaidą turėjo
+  modelis be GT.
+
+Svarbios pastabos:
+DM testų lentelės yra galutinės rezultatų analizės dalis. ElasticNet DM testai
+buvo papildomai perskaičiuoti su TACTiS-2, kad testų skaičius sutaptų su 37
+pilnomis ElasticNet specifikacijomis.
+
+
+File: scripts/data_preparation.py
+------------------------------------
+Paskirtis:
+Bendresnis duomenų paruošimo failas iš ankstesnės projekto versijos.
+
+Vaidmuo pipeline:
+Gali paruošti bendro dažnio arba mišraus dažnio duomenis iš platesnės duomenų
+bazės struktūros. Galutinėje bakalauro analizėje svarbesnis yra
+prepare_selected_frequency_aware_data.py, tačiau šis failas paliktas kaip
+platesnės infrastruktūros dalis.
+
+Statusas:
+Pagalbinis / legacy, ne pagrindinis final thesis duomenų paruošimo failas.
+
+
+File: scripts/db_helpers.py
+------------------------------------
+Paskirtis:
+Pagalbinės funkcijos darbui su PostgreSQL duomenų baze.
+
+Vaidmuo pipeline:
+Naudojamas duomenų eksportavimo ir ingestinimo failuose. Centralizuoja duomenų
+bazės prisijungimo, hash ir įrašymo logiką.
+
+Statusas:
+Pagalbinis infrastruktūros failas.
+
+
+File: scripts/load_eurostat.py
+------------------------------------
+Paskirtis:
+Eurostat duomenų atsisiuntimas ir įkėlimas į duomenų bazę.
+
+Vaidmuo pipeline:
+Naudotas platesnėje duomenų bazės pildymo logikoje. Galutinėje bakalauro analizėje
+tiesiogiai svarbesnis yra jau atrinktų Eurostat duomenų eksportavimas per
+export_selected_eurostat_nowcast_data.py.
+
+Statusas:
+Pagalbinis / duomenų bazės infrastruktūros failas.
+
+
+File: scripts/load_google_trends.py
+------------------------------------
+Paskirtis:
+Google Trends duomenų atsisiuntimas ir įkėlimas į duomenų bazę.
+
+Vaidmuo pipeline:
+Naudotas Google Trends duomenų sukaupimui duomenų bazėje. Galutinėje analizėje
+naudojami jau eksportuoti ir paruošti Google Trends rinkiniai.
+
+Statusas:
+Pagalbinis / duomenų bazės infrastruktūros failas.
+
+
+File: scripts/get_vintage.py
+------------------------------------
+Paskirtis:
+Pagalbinis failas istorinei duomenų būsenai ištraukti.
+
+Vaidmuo pipeline:
+Gali būti naudojamas testuoti vintage logikai, tačiau pagrindinis pseudo-realaus
+laiko konstravimas final thesis eksperimente atliekamas per VintageBuilder.
+
+Statusas:
+Pagalbinis failas.
+
+
+File: scripts/__init__.py
+------------------------------------
+Paskirtis:
+Python paketo inicializacijos failas.
+
+Vaidmuo pipeline:
+Leidžia importuoti scripts katalogo modulius iš kitų failų.
+
+================================================================================
+PART 2: NOWCASTING / DATA
+================================================================================
+
+File: nowcasting/data/vintage_builder.py
+------------------------------------
+Paskirtis:
+Konstruoja pseudo-realaus laiko prognozavimo pjūvius.
+
+Vaidmuo pipeline:
+Tai vienas svarbiausių viso darbo failų. Jis užtikrina, kad kiekviename
+prognozės momente modelis naudotų tik tuo metu prieinamą informaciją.
+
+Pagrindinės funkcijos:
+- skaičiuoja cutoff datą pagal prognozės momentą;
+- maskuoja požymius, kurie nebūtų prieinami cutoff momentu;
+- taiko požymių publikavimo vėlavimus;
+- neleidžia prognozuojamo ketvirčio BVP reikšmei patekti į mokymo imtį;
+- formuoja rolling-window mokymo imtį;
+- taiko apkarpytų kraštų užpildymo metodus;
+- agreguoja mėnesinius duomenis į ketvirtinį lygį ElasticNet tipo modeliams;
+- palaiko AutoARIMA cache mechanizmą.
+
+Svarbios pastabos:
+Šis failas yra pagrindinis pseudo-realaus laiko logikos šaltinis. Jis padeda
+sumažinti look-ahead bias riziką.
+
+================================================================================
+PART 3: NOWCASTING / FILLERS
+================================================================================
+
+File: nowcasting/fillers/tactis2_filler.py
+------------------------------------
+Paskirtis:
+Įgyvendina TACTiS-2 užpildymo metodą apkarpytų kraštų problemai spręsti.
+
+Vaidmuo pipeline:
+TACTiS-2 šiame darbe naudojamas ne kaip galutinis BVP prognozavimo modelis, o kaip
+daugiakintamis laiko eilučių užpildymo metodas. Užpildytos reikšmės vėliau
+perduodamos ElasticNet modeliui.
+
+Svarbios savybės:
+- palaiko paprastesnę ir autorių konfigūraciją;
+- leidžia nustatyti context_length, prediction_length, epochs, batch_size,
+  num_samples ir kitus parametrus;
+- gali naudoti GPU, jei jis prieinamas;
+- išsaugo užpildytas reikšmes ir diagnostikos failus;
+- nesėkmės atveju gali naudoti techninį fallback mechanizmą.
+
+Svarbios pastabos:
+Darbe TACTiS-2 interpretuojamas kaip vienas iš ElasticNet apkarpytų kraštų
+užpildymo metodų kartu su LOCF, vertikaliu suderinimu ir AutoARIMA.
+
+================================================================================
+PART 4: NOWCASTING / MODELS
+================================================================================
+
+File: nowcasting/models/base.py
+------------------------------------
+Paskirtis:
+Apibrėžia bazinę modelių klasę.
+
+Vaidmuo pipeline:
+Užtikrina bendrą sąsają visiems modeliams: fit, predict ir evaluate.
+
+Statusas:
+Pagalbinis, bet būtinas modelių infrastruktūros failas.
+
+
+File: nowcasting/models/ml_regression.py
+------------------------------------
+Paskirtis:
+Įgyvendina ElasticNet ir kitus paprastesnius ML regresijos modelius.
+
+Vaidmuo pipeline:
+Galutiniuose bakalauro eksperimentuose svarbiausias komponentas yra ElasticNet.
+Jis naudojamas kaip bendro dažnio regresinis modelis, kuriam prieš treniravimą
+reikia užpildyti apkarpytus kraštus ir agreguoti duomenis iki ketvirtinio lygio.
+
+Galutinėje analizėje naudota ElasticNet gardelė:
+alpha = 1e-8, 1e-5, 1e-4, 1e-3
+l1_ratio = 0.25
+max_iter = 20000
+vidinė kryžminė patikra = nenaudota
+
+Naudoti požymių atrankos metodai:
+- PCA;
+- koreliacijos atranka;
+- LASSO atranka.
+
+Svarbios pastabos:
+ElasticNet yra pagrindinis modelis, kuriam buvo lyginami keturi išoriniai
+apkarpytų kraštų užpildymo metodai.
+
+
+File: nowcasting/models/midas.py
+------------------------------------
+Paskirtis:
+Įgyvendina MIDAS ir MIDASML modelius.
+
+Vaidmuo pipeline:
+MIDAS leidžia tiesiogiai naudoti aukštesnio dažnio mėnesinius požymius ketvirtiniam
+BVP prognozavimui. Tam aukšto dažnio reikšmės sudedamos į lagų matricą.
+
+Naudota MIDAS gardelė:
+n_lags = 3, 4, 6, 9, 12
+regression_model = linear, ridge
+
+Naudota MIDASML gardelė:
+n_lags = 3, 4, 6, 9, 12
+l1_ratio = 0.1, 0.5, 0.9
+cv = 5
+max_iter = 5000
+
+Svarbios pastabos:
+Teoriškai MIDASML gardelė sudarė 15 specifikacijų, tačiau galutinėje 
+analizėje naudotos 10 pilnų specifikacijų, nes tik joms buvo rasti visi trys
+palyginimo variantai: be GT, su anglišku GT ir su lietuvišku GT.
+
+
+File: nowcasting/models/dfm.py
+------------------------------------
+Paskirtis:
+Įgyvendina Dynamic Factor Model ir mixed-frequency Dynamic Factor Model.
+
+Vaidmuo pipeline:
+DFM modeliai iš didelio makroekonominių rodiklių skaičiaus išskiria bendrus
+latentinius faktorius ir naudoja juos BVP prognozavimui.
+
+Naudota DFM gardelė:
+k_factors = 1, 2, 3
+factor_order = 1, 2, 3
+selector = pca, corr_top_n
+pca_components = 10, 20
+top_n = 20, 50
+
+Naudota DFM-MF gardelė:
+k_factors = 1, 2, 3
+factor_order = 1, 2, 3
+selector = corr_top_n
+top_n = 20, 50
+
+Svarbios pastabos:
+DFM-MF rezultatai darbe interpretuojami atsargiai, nes dalis specifikacijų buvo nestabilios. 
+Galutinėse strict RMSE lentelėse naudotos 26 pilnos
+DFM specifikacijos ir 18 pilnų DFM-MF specifikacijų.
+
+
+File: nowcasting/models/pca_regression.py
+------------------------------------
+Paskirtis:
+Paprasta PCA regresijos pagalbinė klasė.
+
+Vaidmuo pipeline:
+Palikta kaip bendresnės modelių infrastruktūros dalis. Galutinėje bakalauro
+analizėje pagrindinis dėmesys skiriamas ElasticNet, MIDAS, MIDASML, DFM ir DFM-MF.
+
+Statusas:
+Pagalbinis / nepagrindinis final thesis komponentas.
+
+
+File: nowcasting/models/tactis_wrapper.py
+------------------------------------
+Paskirtis:
+Senesnis TACTiS kaip tiesioginio prognozavimo modelio wrapper.
+
+Vaidmuo pipeline:
+Galutinėje bakalauro logikoje pagrindinis TACTiS-2 naudojimas vyksta per
+nowcasting/fillers/tactis2_filler.py kaip užpildymo metodas, todėl šis failas
+nėra pagrindinis galutinės analizės komponentas.
+
+Statusas:
+Legacy / pagalbinis.
+
+================================================================================
+PART 5: NOWCASTING / FEATURES
+================================================================================
+
+File: nowcasting/features/selectors.py
+------------------------------------
+Paskirtis:
+Požymių atrankos ir dimensijos mažinimo metodai.
+
+Vaidmuo pipeline:
+Naudojamas mažinant labai didelį požymių skaičių prieš modelių treniravimą.
+Svarbu, kad atranka būtų apmokoma tik ant mokymo imties.
+
+Svarbiausi darbe naudoti komponentai:
+- VarianceFilter;
+- PCACompressor;
+- LassoSelector;
+- ElasticNetSelector.
+
+Svarbios pastabos:
+PCA, koreliacijos atranka ir LASSO atranka yra pagrindiniai ElasticNet rezultatų
+lentelėse aprašomi atrankos metodai.
+
+
+File: nowcasting/features/selection.py
+------------------------------------
+Paskirtis:
+Papildomi požymių atrankos pagalbiniai metodai.
+
+Vaidmuo pipeline:
+Paliktas kaip bendresnės atrankos infrastruktūros dalis.
+
+Statusas:
+Pagalbinis.
+
+
+File: nowcasting/features/engineering.py
+------------------------------------
+Paskirtis:
+Laiko eilučių požymių inžinerijos pagalbinis failas.
+
+Vaidmuo pipeline:
+Gali kurti lag ir rolling požymius. Galutinėje bakalauro analizėje pagrindinė
+modelių atrankos ir transformacijų logika vyksta per run_local_vintage_nowcasts.py
+ir selectors.py.
+
+Statusas:
+Pagalbinis.
+
+================================================================================
+PART 6: NOWCASTING / EVALUATION
+================================================================================
+
+File: nowcasting/evaluation/backtester.py
+------------------------------------
+Paskirtis:
+Bendresnis rolling backtesting įrankis iš ankstesnės projekto versijos.
+
+Vaidmuo pipeline:
+Galutiniame bakalauro eksperimente pagrindinė pseudo-realaus laiko vertinimo
+logika vykdoma per run_local_vintage_nowcasts.py ir VintageBuilder. Tačiau šis
+failas paliktas kaip bendros evaluation infrastruktūros dalis.
+
+Statusas:
+Pagalbinis / legacy.
+
+File: nowcasting/evaluation/metrics.py
+------------------------------------
+Paskirtis:
+Bendri prognozavimo kokybės rodikliai.
+
+Vaidmuo pipeline:
+Skaičiuoja RMSE, MAE ir kitus galimus rodiklius. Galutinėje analizėje pagrindinės
+metrikos yra RMSE ir MAE.
+
+File: nowcasting/evaluation/checkpoint.py
+------------------------------------
+Paskirtis:
+Checkpoint ir resume infrastruktūra.
+
+Vaidmuo pipeline:
+Naudinga ilgiems eksperimentams, nes leidžia tęsti nutrūkusius skaičiavimus ir
+išvengti pakartotinio jau atliktų konfigūracijų skaičiavimo.
+
+================================================================================
+PART 7: NOWCASTING / UTILS
+================================================================================
+
+File: nowcasting/utils/data_loader.py
+------------------------------------
+Paskirtis:
+Pagalbinis duomenų įkėlimo failas.
+
+Vaidmuo pipeline:
+Paliktas bendresnei projekto infrastruktūrai. Galutiniuose eksperimento
+paleidimuose svarbesnis yra scripts/local_data_builder.py.
+
+Statusas:
+Pagalbinis.
+
+================================================================================
+PART 8: EXPERIMENTS KATALOGAS
+================================================================================
+
+Kataloge experiments/ palikti senesni arba pagalbiniai eksperimentų runner failai.
+Galutiniai bakalauro eksperimento paleidimai daugiausia vyksta per scripts/
+kataloge esantį wrapper failą.
+
+File: experiments/run_dfm_experiment.py
+------------------------------------
+Paskirtis:
+Atskiras DFM eksperimentų paleidimo failas.
+
+Statusas:
+Pagalbinis / senesnis runner.
+
+File: experiments/run_midas_search.py
+------------------------------------
+Paskirtis:
+Atskiras MIDAS parametrų paieškos failas.
+
+Statusas:
+Pagalbinis / senesnis runner.
+
+File: experiments/run_tabular_search.py
+------------------------------------
+Paskirtis:
+Atskiras tabular modelių, tokių kaip ElasticNet, paieškos failas.
+
+Statusas:
+Pagalbinis / senesnis runner.
+
+File: experiments/run_tactis_experiment.py
+------------------------------------
+Paskirtis:
+Senesnis TACTiS eksperimento paleidimo failas.
+
+Statusas:
+Legacy. Galutinėje analizėje TACTiS-2 naudojamas kaip užpildymo metodas per
+tactis2_filler.py.
+
+================================================================================
+PART 9: ŠAKNINIAI FAILAI
+================================================================================
+
+
+File: calculate_gt_rmse_reduction.py
+------------------------------------
+Paskirtis:
+Pagalbinis failas Google Trends poveikiui pagal RMSE pokytį skaičiuoti.
+
+Vaidmuo pipeline:
+Naudojamas formuojant RMSE sumažėjimo lenteles, kuriose lyginamos specifikacijos
+be GT ir su GT.
+
+Svarbios pastabos:
+Jei šiame faile laikoma senesnė versija, o galutinėms lentelėms buvo naudoti
+atskiri strict perskaičiavimo skriptai, šį failą reikia laikyti pagalbiniu ir
+atnaujinti arba aiškiai pažymėti jo paskirtį.
+
+
+File: main.py
+------------------------------------
+Paskirtis:
+Bendras projekto įėjimo taškas iš ankstesnės sistemos versijos.
+
+Vaidmuo pipeline:
+Galutiniuose bakalauro eksperimentuose pagrindinis paleidimas vyksta per
+scripts/run_local_vintage_nowcasts.py ir
+scripts/run_20260508_test_experiments_lag0_selectors_RESUME_CLEAN.py.
+
+Statusas:
+Pagalbinis / legacy.
+
+
+File: docker-compose.yml
+------------------------------------
+Paskirtis:
+Lokalaus PostgreSQL serverio paleidimas.
+
+Vaidmuo pipeline:
+Naudingas, jei reikia lokaliai atkurti duomenų bazę.
+
+
+File: requirements.txt
+------------------------------------
+Paskirtis:
+Python bibliotekų sąrašas.
+
+Vaidmuo pipeline:
+Naudojamas aplinkai atkurti:
+
+pip install -r requirements.txt
+
+
+File: run_ingest.py
+------------------------------------
+Paskirtis:
+Duomenų įkėlimo orkestratorius iš platesnio projekto pipeline.
+
+Statusas:
+Pagalbinis / duomenų bazės infrastruktūros failas.
+
+
+File: run_updates.py
+------------------------------------
+Paskirtis:
+Reguliarūs duomenų atnaujinimai iš platesnio projekto pipeline.
+
+Statusas:
+Pagalbinis / duomenų bazės infrastruktūros failas.
+
+================================================================================
+PART 10: GALUTINĖS ANALIZĖS MODELIAI
+================================================================================
+
+Modelis: ElasticNet
+Failas: nowcasting/models/ml_regression.py
+Vaidmuo: bendro dažnio regresinis modelis.
+
+Modelis: MIDAS
+Failas: nowcasting/models/midas.py
+Vaidmuo: mišraus dažnio regresija.
+
+Modelis: MIDASML
+Failas: nowcasting/models/midas.py
+Vaidmuo: MIDAS lagų matrica su ElasticNet regresoriumi.
+
+Modelis: DFM
+Failas: nowcasting/models/dfm.py
+Vaidmuo: bendro dažnio dinaminis faktorių modelis.
+
+Modelis: DFM-MF
+Failas: nowcasting/models/dfm.py
+Vaidmuo: mišraus dažnio dinaminis faktorių modelis.
+
+Metodas: TACTiS-2
+Failas: nowcasting/fillers/tactis2_filler.py
+Vaidmuo: apkarpytų kraštų užpildymo metodas prieš ElasticNet.
+
+
