@@ -1,0 +1,556 @@
+eurostat_auto:
+  geo: ["LT"]
+  freqs: ["M", "Q"]
+  min_date: "2004-01-01"
+  max_datasets: 2000
+  cache_path: "config/eurostat_autolist.yaml"
+eurostat_discovery:
+  include_keywords:
+    - gdp
+    - unemployment
+    - hicp
+    - ppi
+    - retail
+    - industrial
+    - trade
+    - confidence
+  geo: ["LT"]
+  limit: 150
+
+yahoo_finance:
+#Lietuva
+  "^OMXV":
+    name: "OMX Vilnius Index"
+  "APG1L.VS":
+    name: "Apranga"
+  "TEL1L.VS":
+    name: "Telia Lietuva"
+  "IGN1L.VS":
+    name: "Ignitis grupė"
+  "RSU1L.VS":
+    name: "Rokiškio sūris"
+  "^VIX":
+    name: "Volatility index"
+  "^MOVE":
+    name: "Obligacijos"
+  "HYG":
+    name: "High Yield Corporate Bond"
+  "WIG20.WA":
+    name: "Lenkijos fondų indeksas"
+  "XLI":
+    name: "industrials"
+  "XHB":
+    name: "homebuilders"
+  "ITA":
+    name: "aerospace"
+  "SOXX":
+    name: "semiconductors"
+  #US Indices
+  "^GSPC":
+    name: "S&P 500"
+  "^DJI":
+    name: "Dow Jones Industrial Average"
+  "^IXIC":
+    name: "Nasdaq Composite"
+  "^RUT":
+    name: "Russell 2000"
+
+  #Europe Indices
+  "^STOXX50E":
+    name: "Euro Stoxx 50"
+  "^GDAXI":
+    name: "DAX"
+  "^FCHI":
+    name: "CAC 40"
+  "^FTSE":
+    name: "FTSE 100"
+
+  #Asia
+  "^N225":
+    name: "Nikkei 225"
+  "^HSI":
+    name: "Hang Seng"
+  "000001.SS":
+    name: "Shanghai Composite"
+
+  #Currencies
+  "EURUSD=X":
+    name: "EUR/USD Exchange Rate"
+  "EURGBP=X":
+    name: "EUR/GBP Exchange Rate"
+  "EURJPY=X":
+    name: "EUR/JPY Exchange Rate"
+  "EURPLN=X":
+    name: "EUR/PLN Exchange Rate"
+  "GBPUSD=X":
+    name: "GBP/USD Exchange Rate"
+
+  #Commodities
+  "BZ=F":
+    name: "Brent Crude Oil"
+  "CL=F":
+    name: "WTI Crude Oil"
+  "NG=F":
+    name: "Natural Gas"
+  "GC=F":
+    name: "Gold"
+  "SI=F":
+    name: "Silver"
+  "HG=F":
+    name: "Copper"
+  "ZC=F":
+    name: "Corn"
+  "ZW=F":
+    name: "Wheat"
+  "ZS=F":
+    name: "Soybeans"
+
+  #Bonds / Rates
+  "^TNX":
+    name: "US 10Y Treasury Yield"
+  "^IRX":
+    name: "US 3M Treasury Yield"
+  "^FVX":
+    name: "US 5Y Treasury Yield"
+  "^TYX":
+    name: "US 30Y Treasury Yield"
+
+  #ETFs (Macro proxies)
+  "SPY":
+    name: "SPDR S&P 500 ETF"
+  "QQQ":
+    name: "Invesco QQQ ETF"
+  "IWM":
+    name: "iShares Russell 2000 ETF"
+  "EEM":
+    name: "iShares MSCI Emerging Markets ETF"
+  "VGK":
+    name: "Vanguard FTSE Europe ETF"
+  "VWO":
+    name: "Vanguard Emerging Markets ETF"
+  "XLE":
+    name: "Energy Select Sector SPDR ETF"
+  "XLF":
+    name: "Financial Select Sector SPDR ETF"
+  "XLK":
+    name: "Technology Select Sector SPDR ETF"
+
+google_trends:
+  keywords:
+    - "crisis"
+    - "Auto insurance"
+    - "house prices"
+    - "Immigration"
+    - "inflation"
+    - "business"
+    - "tourism"
+    - "credit"
+    - "prices"
+    - "export"
+    - "import"
+    - "Energy"
+    - "work"
+    - "Loan"
+    - "Food prices"
+    - "unemployment"
+    - "Economy"
+    - "housing crisis"
+    - "emigration"
+    - "fuel price"
+    - "Circular economy"
+    - "recession"
+    - "slowdown"
+    - "recovery"
+    - "manufacturing"
+    - "production"
+    - "supply chain"
+    - "demand"
+    - "cost of living"
+    - "consumer sentiment"
+    - "consumer confidence"
+    - "disposable income"
+    - "wage growth"
+    - "wage stagnation"
+    - "wage cuts"
+    - "layoffs"
+    - "bankruptcy"
+    - "insolvency"
+    - "housing market"
+    - "real estate"
+    - "mortgage rates"
+    - "interest rate"
+    - "central bank"
+    - "monetary policy"
+    - "fiscal policy"
+    - "government debt"
+    - "budget deficit"
+    - "inflation expectations"
+    - "commodity prices"
+    - "raw materials"
+    - "industrial output"
+    - "retail sales"
+    - "e-commerce growth"
+    - "digital transformation"
+    - "investment"
+    - "foreign direct investment"
+    - "capital flows"
+    - "exchange rate"
+    - "currency depreciation"
+    - "trade war"
+    - "tariffs"
+    - "sanctions"
+    - "supply disruption"
+    - "logistics bottleneck"
+    - "stock market crash"
+    - "asset bubble"
+    - "over-capacity"
+    - "under-employment"
+    - "shadow economy"
+    - "gray economy"
+    - "corporate profits"
+    - "margin squeeze"
+    - "deflation"
+    - "stagflation"
+    - "credit crunch"
+    - "bank run"
+    - "non-performing loans"
+    - "financial stability"
+    - "wealth inequality"
+    - "social unrest"
+    - "migration flows"
+    - "demographic change"
+    - "ageing population"
+    - "labor shortage"
+    - "automation"
+    - "green transition"
+    - "climate risk"
+    - "energy transition"
+    - "resource depletion"
+    - "housing affordability"
+    - "rental market"
+    - "housing bubble"
+    - "transportation cost"
+    - "logistics cost"
+    - "infrastructure investment"
+    - "public investment"
+    - "private consumption"
+    - "consumer spending"
+    - "business confidence"
+    - "corporate investment"
+  geos: ["LT"]
+  timeframe: "2004-01-01 2025-04-30"
+
+
+google_trends_lt:
+  geos: ["LT"]
+  timeframe: "2004-01-01 2025-04-30"
+
+  keywords:
+
+    # 1. Bendroji ekonomika / krizės / lūkesčiai
+    - "ekonomika"
+    - "Lietuvos ekonomika"
+    - "BVP"
+    - "krizė"
+    - "ekonominė krizė"
+    - "recesija"
+    - "infliacija"
+    - "defliacija"
+    - "stagfliacija"
+    - "kainos"
+    - "pragyvenimo išlaidos"
+    - "vartotojų pasitikėjimas"
+    - "verslo pasitikėjimas"
+    - "ekonomikos prognozė"
+    - "ekonomikos augimas"
+    - "ekonomikos nuosmukis"
+
+    # 2. Darbo rinka / nedarbas
+    - "darbas"
+    - "darbo skelbimai"
+    - "ieškau darbo"
+    - "darbo pasiūlymai"
+    - "laisvos darbo vietos"
+    - "CV"
+    - "gyvenimo aprašymas"
+    - "motyvacinis laiškas"
+    - "LinkedIn"
+    - "Užimtumo tarnyba"
+    - "nedarbas"
+    - "nedarbo išmoka"
+    - "bedarbio pašalpa"
+    - "registracija Užimtumo tarnyboje"
+    - "atleidimas iš darbo"
+    - "darbo sutartis"
+    - "minimalus atlyginimas"
+    - "vidutinis atlyginimas"
+    - "atlyginimas"
+    - "alga"
+    - "atlyginimų augimas"
+    - "darbo užmokestis"
+    - "darbuotojų trūkumas"
+    - "emigracija"
+    - "imigracija"
+
+    # 3. Vartojimas / namų ūkiai
+    - "vartojimas"
+    - "vartotojų išlaidos"
+    - "apsipirkimas"
+    - "akcijos"
+    - "nuolaidos"
+    - "pigiau"
+    - "maisto kainos"
+    - "prekių kainos"
+    - "degalų kainos"
+    - "elektros kaina"
+    - "dujų kaina"
+    - "šildymo kaina"
+    - "komunaliniai mokesčiai"
+    - "paskola vartojimui"
+    - "greitieji kreditai"
+    - "pinigų trūkumas"
+    - "kaip sutaupyti"
+    - "šeimos biudžetas"
+    - "pajamos"
+    - "disponuojamos pajamos"
+
+    # 4. Būsto rinka / nekilnojamasis turtas
+    - "nekilnojamas turtas"
+    - "būsto kainos"
+    - "butų kainos"
+    - "namų kainos"
+    - "būsto paskola"
+    - "paskola būstui"
+    - "hipoteka"
+    - "Euribor"
+    - "palūkanos"
+    - "palūkanų normos"
+    - "nuoma"
+    - "butų nuoma"
+    - "būsto nuoma"
+    - "būsto įperkamumas"
+    - "NT rinka"
+    - "NT krizė"
+    - "statybos"
+    - "nauji butai"
+    - "remontas"
+
+    # 5. Finansai / kreditavimas / bankai
+    - "bankas"
+    - "paskola"
+    - "kreditas"
+    - "lizingas"
+    - "refinansavimas"
+    - "indėliai"
+    - "investavimas"
+    - "akcijos"
+    - "obligacijos"
+    - "pensijų fondai"
+    - "valiutos kursas"
+    - "euras"
+    - "bankrotas"
+    - "nemokumas"
+    - "skolos"
+    - "antstoliai"
+    - "kredito istorija"
+    - "finansiniai sunkumai"
+    - "finansinis stabilumas"
+
+    # 6. Verslas / investicijos / gamyba
+    - "verslas"
+    - "įmonė"
+    - "įmonės steigimas"
+    - "individuali veikla"
+    - "verslo liudijimas"
+    - "PVM"
+    - "mokesčiai"
+    - "pelno mokestis"
+    - "investicijos"
+    - "užsienio investicijos"
+    - "gamyba"
+    - "pramonė"
+    - "pramonės gamyba"
+    - "eksportas"
+    - "importas"
+    - "logistika"
+    - "tiekimo grandinė"
+    - "žaliavos"
+    - "transporto išlaidos"
+    - "sandėliavimas"
+
+    # 7. Prekyba / paslaugos / turizmas
+    - "mažmeninė prekyba"
+    - "didmeninė prekyba"
+    - "e prekyba"
+    - "internetinė parduotuvė"
+    - "restoranai"
+    - "kavinės"
+    - "viešbučiai"
+    - "turizmas"
+    - "kelionės"
+    - "skrydžiai"
+    - "lėktuvo bilietai"
+    - "atostogos"
+    - "automobilio nuoma"
+    - "draudimas"
+    - "automobilio draudimas"
+
+    # 8. Sveikata / ligos / psichologinė būsena
+    - "liga"
+    - "nedarbingumas"
+    - "biuletenis"
+    - "Sodra nedarbingumas"
+    - "depresija"
+    - "nerimas"
+    - "stresas"
+    - "psichologas"
+    - "psichinė sveikata"
+    - "miego sutrikimai"
+    - "alkoholis"
+    - "priklausomybė"
+    - "savižudybė"
+    - "smurtas artimoje aplinkoje"
+    - "pagalba"
+
+    # 9. Laisvalaikis / elgsena krizės metu
+    - "Netflix"
+    - "YouTube"
+    - "žaidimai"
+    - "kompiuteriniai žaidimai"
+    - "lažybos"
+    - "loterija"
+    - "receptai"
+    - "maisto gaminimas"
+    - "hobiai"
+    - "sportas namuose"
+    - "pigios kelionės"
+    - "nemokami filmai"
+    - "nuolaidų kodai"
+
+    # 10. Energetika / žalia transformacija
+    - "energetika"
+    - "elektra"
+    - "dujos"
+    - "kuras"
+    - "dyzelinas"
+    - "benzinas"
+    - "saulės elektrinė"
+    - "šilumos siurblys"
+    - "renovacija"
+    - "energetinė krizė"
+    - "žalioji transformacija"
+    - "klimato kaita"
+    - "tarša"
+
+    # 11. Valstybės finansai / politika / parama
+    - "valstybės biudžetas"
+    - "biudžeto deficitas"
+    - "valstybės skola"
+    - "parama verslui"
+    - "subsidija"
+    - "kompensacija"
+    - "socialinė pašalpa"
+    - "vaiko pinigai"
+    - "pensija"
+    - "mokesčių reforma"
+
+alfred:
+  GDP:
+    name: "US GDP"
+    realtime: true
+  GDPC1:
+    name: "US Real GDP"
+    realtime: true
+  CPIAUCSL:
+    name: "US CPI"
+    realtime: true
+  UNRATE:
+    name: "US Unemployment Rate"
+    realtime: true
+
+eurostat:
+  sts_inpr_m:
+    name: "Industrial production, monthly"
+    filters:
+      geo: ["LT"]
+
+  lfsi_emp_q:
+    name: "Employment, quarterly"
+    filters:
+      geo: ["LT"]
+
+  sts_trtu_m:
+    name: "Trade turnover, monthly"
+    filters:
+      geo: ["LT"]
+
+  nasq_10_nf_tr:
+    name: "Sector accounts / non-financial transactions, quarterly"
+    filters:
+      geo: ["LT"]
+
+  namq_10_gdp:
+    name: "GDP and main components, quarterly"
+    filters:
+      geo: ["LT"]
+
+  namq_10_exi:
+    name: "Exports/imports, quarterly"
+    filters:
+      geo: ["LT"]
+
+  ei_bsbu_m_r2:
+    name: "Business survey: building, monthly"
+    filters:
+      geo: ["LT"]
+
+  ei_bsco_m:
+    name: "Consumer survey, monthly"
+    filters:
+      geo: ["LT"]
+
+  namq_10_a10:
+    name: "Value added by industry, quarterly"
+    filters:
+      geo: ["LT"]
+
+  ei_bsin_q_r2:
+    name: "Business survey: industry, quarterly"
+    filters:
+      geo: ["LT"]
+
+  namq_10_an6:
+    name: "National accounts by asset, quarterly"
+    filters:
+      geo: ["LT"]
+
+  une_rt_m:
+    name: "Unemployment rate, monthly"
+    filters:
+      geo: ["LT"]
+
+  ei_lmhu_m:
+    name: "Labour market / unemployment expectations, monthly"
+    filters:
+      geo: ["LT"]
+
+  ei_bsin_m_r2:
+    name: "Business survey: industry, monthly"
+    filters:
+      geo: ["LT"]
+
+  gov_10q_ggnfa:
+    name: "Government finance, quarterly"
+    filters:
+      geo: ["LT"]
+
+  ei_bsse_m_r2:
+    name: "Business survey: services, monthly"
+    filters:
+      geo: ["LT"]
+
+  namq_10_lp_ulc:
+    name: "Labour productivity and unit labour costs, quarterly"
+    filters:
+      geo: ["LT"]
+#
